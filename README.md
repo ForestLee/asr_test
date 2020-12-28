@@ -4,6 +4,7 @@
 # 降噪处理
 TBD， can reference to
 https://www.cnblogs.com/cpuimage/p/8905965.html
+https://blog.csdn.net/aa98865646/article/details/105435426
 
 # 笔记
 arecord -l

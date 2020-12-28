@@ -325,12 +325,13 @@ void *record_task(void *ptr) {
 }
 
 int main(int argc, char *argv[]) {
-//    const char *device_name = argv[1];
+    const char *device_name = argv[1]; // hw:0,0   or hw:1,0
 //    const char *save_file = argv[2];
     // record_pcm(device_name, save_file);
     // wav_to_pcm_remove_header("/home/forest/asr/2.wav", "/home/forest/asr/2.pcm");
     // down_sample_pcm_file("/home/forest/asr/2.pcm", "/home/forest/asr/2_16k.pcm");
 
+    g_record = std::make_shared<audio::RecordPcm>(device_name, "/home/forest/asr/2.pcm");
     printf("输入start开始录音, stop停止, exit退出\n");
     pthread_t id;
     bool run = true;
@@ -343,9 +344,9 @@ int main(int argc, char *argv[]) {
         std::cout << "\n>";
         std::getline(std::cin, input);
 
-        if (input == "start") {
+        if (input == "start" || input == "s") {
             int ret = pthread_create(&id, nullptr, record_task, nullptr);
-        } else if (input == "stop") {
+        } else if (input == "stop" || input == "t") {
             g_record->stop_record();
             while(!g_record->is_stop());
             int len = g_record->get_length();
@@ -359,7 +360,7 @@ int main(int argc, char *argv[]) {
             asr_process.run(char_buffer, out_len);
             free(out_buf);
             out_buf = nullptr;
-        } else if (input == "exit") {
+        } else if (input == "exit" || input == "e" || input == "x") {
             break;
         }
     }
