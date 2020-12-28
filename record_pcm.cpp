@@ -1,4 +1,4 @@
-
+// in ubuntu x86_64, now can only record in 44100 rate
 #include "record_pcm.h"
 
 namespace audio {
@@ -112,8 +112,13 @@ void RecordPcm::start_record() {
     while (_real_len / _single_piece_len < MAX_PIECES -2) {
         /*从声卡设备读取一帧音频数据*/
         if ((err = snd_pcm_readi(_capture_handle, _buffer, _buffer_frames)) != _buffer_frames) {
-            printf("从音频接口读取失败(%s)\n", snd_strerror(err));
-            return;
+            if (err == - EPIPE) {
+                fprintf(stderr, "overrun occurred\n");
+                snd_pcm_prepare(_capture_handle);
+            } else if (err < 0) {
+                printf("从音频接口读取失败(%s)\n", snd_strerror(err));
+                return;
+            }
         }
         /*写数据到文件*/
         fwrite(_buffer, (_buffer_frames * 2), sizeof(short), _pcm_data_file);

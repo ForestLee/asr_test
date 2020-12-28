@@ -1,4 +1,6 @@
 /*
+ * https://blog.csdn.net/xiaolong1126626497/article/details/104916277
+ * ftp://ftp.alsa-project.org/pub/lib/
  进行音频采集，采集pcm数据并直接保存pcm数据
  音频参数：
 	 声道数：		2
@@ -6,6 +8,7 @@
 	 采样频率：	44100Hz
 
  "arecord -l" to find device name
+ arecord -c 2 -D hw:1,0 -r 44100 -f S16_LE -t raw ./2.pcm
 */
 
 #ifndef RECORD_PCM_H_

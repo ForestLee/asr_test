@@ -4,6 +4,13 @@
 	 声道数：		2
 	 采样位数：	16bit、LE格式
 	 采样频率：	44100Hz
+
+	 check record device name: arecord -l
+	 record pcm, like:arecord -c 2 -D hw:1,0 -r 44100 -f S16_LE -t raw ./2.pcm
+	 play pcm: aplay 2.wav
+               aplay -t raw -c 2 -f S16_LE -r 44100 2.pcm
+               aplay -t raw -c 1 -f S16_LE -r 16000 2_16k.pcm
+
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -311,7 +318,7 @@ int down_sample_mono(short int in_buffer[],
 //    free(out_buf);//释放out_buf
 //}
 
-std::shared_ptr<audio::RecordPcm> g_record = std::make_shared<audio::RecordPcm>();
+std::shared_ptr<audio::RecordPcm> g_record = std::make_shared<audio::RecordPcm>("hw:1,0", "/home/forest/asr/2.pcm");
 
 void *record_task(void *ptr) {
     g_record->start_record();

@@ -1,5 +1,6 @@
 //
 // Created by forest on 2020/12/27.
+// reference to https://github.com/Baidu-AIP/speech-demo/tree/master/rest-api-asr/c
 //
 #include <memory>
 #include "asr_process.h"
