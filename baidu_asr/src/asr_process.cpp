@@ -64,19 +64,19 @@ RETURN_CODE AsrProcess::fill_config(asr_config *config) {
     return RETURN_OK;
 }
 
-RETURN_CODE AsrProcess::run(char *buffer, int content_len) {
+RETURN_CODE AsrProcess::run(char *buffer, int content_len, std::string &asr_result) {
     RETURN_CODE res;
     // 获取token
     res = Token::speech_get_token(config.api_key, config.secret_key, config.scope, token);
     if (res == RETURN_OK) {
         // 调用识别接口
-        run_asr(&config, token, buffer, content_len);
+        run_asr(&config, token, buffer, content_len, asr_result);
     }
     return res;
 }
 
 // 调用识别接口
-RETURN_CODE AsrProcess::run_asr(struct asr_config *config, const char *token, char *buffer, int content_len) {
+RETURN_CODE AsrProcess::run_asr(struct asr_config *config, const char *token, char *buffer, int content_len, std::string &asr_result) {
     char url[300];
     CURL *curl = curl_easy_init(); // 需要释放
     char *cuid = curl_easy_escape(curl, config->cuid, strlen(config->cuid)); // 需要释放
@@ -111,6 +111,7 @@ RETURN_CODE AsrProcess::run_asr(struct asr_config *config, const char *token, ch
 
     //printf("request url :%s\n", url);
     //printf("header is: %s\n", header);
+    asr_result = result;
 
     RETURN_CODE res = RETURN_OK;
     if (res_curl != CURLE_OK) {

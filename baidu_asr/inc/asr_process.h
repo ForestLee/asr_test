@@ -41,9 +41,9 @@ class AsrProcess {
 
     static RETURN_CODE fill_config(asr_config *config);
 
-    RETURN_CODE run(char *buffer, int content_len);
+    RETURN_CODE run(char *buffer, int content_len, std::string &asr_result);
 
-    RETURN_CODE run_asr(struct asr_config *config, const char *token, char *buffer, int content_len);
+    RETURN_CODE run_asr(struct asr_config *config, const char *token, char *buffer, int content_len, std::string &asr_result);
 
 
 };

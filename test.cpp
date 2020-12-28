@@ -25,6 +25,7 @@
 
 using namespace audio;
 
+#if 0
 //FILE *pcm_data_file = nullptr;
 //int run_flag = 0;
 //void exit_sighandler(int sig) {
@@ -217,32 +218,7 @@ using namespace audio;
 //    return out_sample - 1;
 //}
 
-// down sample, rate from 44100 to 16000, 2-byte(16bit)-data
-// 2 channel to 1 channel
-int down_sample_mono(short int in_buffer[],
-                short int out_buffer[],
-                int input_sample_rate,
-                int output_sample_rate,
-                int input_len) {
-    double ratio = (double) input_sample_rate / output_sample_rate;
-    int out_sample = 0;
-    while (true) {
-        int in_buffer_index = (int) (out_sample++ * ratio);
-        if (in_buffer_index < input_len)
-            out_buffer[out_sample] = in_buffer[in_buffer_index];
-        else
-            break;
-    }
 
-    int len = (out_sample - 1) / 2;
-    for (int i = 0; i < len; i++)
-    {
-        out_buffer[i] = (static_cast<int32_t>(out_buffer[2 * i]) + out_buffer[2 * i + 1]) >> 1;
-    }
-
-    //printf("down sample %d\n", len);
-    return len;
-}
 //
 //void down_sample_pcm_file(const char *input_pcm_file, const char *output_pcm_file) {
 //    size_t result;
@@ -317,6 +293,48 @@ int down_sample_mono(short int in_buffer[],
 //    fclose(fp2);
 //    free(out_buf);//释放out_buf
 //}
+#endif
+
+// down sample, rate from 44100 to 16000, 2-byte(16bit)-data
+// 2 channel to 1 channel
+int down_sample_mono(short int in_buffer[],
+                     short int out_buffer[],
+                     int input_sample_rate,
+                     int output_sample_rate,
+                     int input_len) {
+    double ratio = (double) input_sample_rate / output_sample_rate;
+    int out_sample = 0;
+    while (true) {
+        int in_buffer_index = (int) (out_sample++ * ratio);
+        if (in_buffer_index < input_len)
+            out_buffer[out_sample] = in_buffer[in_buffer_index];
+        else
+            break;
+    }
+
+    int len = (out_sample - 1) / 2;
+    for (int i = 0; i < len; i++) {
+        out_buffer[i] = (static_cast<int32_t>(out_buffer[2 * i]) + out_buffer[2 * i + 1]) >> 1;
+    }
+
+    //printf("down sample %d\n", len);
+    return len;
+}
+
+bool extract_text(std::string &input_str, std::string &content) {
+    // std::string input_str = "xxx[\"aaa\"]yyyy";
+    size_t start = input_str.find("[\"");
+    if (start != std::string::npos) {
+        content = input_str.substr(start + 2, input_str.length());
+        size_t end = content.find("\"]");
+        if (end != std::string::npos) {
+            content = content.substr(0, end);
+            printf("asr:%s\n", content.c_str());
+            return true;
+        }
+    }
+    return false;
+}
 
 std::shared_ptr<audio::RecordPcm> g_record = std::make_shared<audio::RecordPcm>("hw:1,0", "/home/forest/asr/2.pcm");
 
@@ -324,7 +342,18 @@ void *record_task(void *ptr) {
     g_record->start_record();
 }
 
+#ifdef DM
+extern "C" const char *test_lib_wrapper(const char *config_path);
+extern "C" int dm_initialize(const char *config_path);
+extern "C" const char *dm_process(const char *input_text_message_str, const char *context_str);
+extern "C" void dm_cleanup();
+#endif
+
 int main(int argc, char *argv[]) {
+#ifdef DM
+    dm_initialize("local_dialog_system/config");
+#endif
+
     const char *device_name = argv[1]; // hw:0,0   or hw:1,0
 //    const char *save_file = argv[2];
     // record_pcm(device_name, save_file);
@@ -338,6 +367,11 @@ int main(int argc, char *argv[]) {
     short int *buffer = nullptr;
     short int *out_buf = nullptr; // (short int *) malloc(sizeof(short int) * (filesize / sizeof(short int)));
     AsrProcess asr_process;
+    std::string asr_result;
+    std::string asr_text;
+    const char *format_nlu_input_str =
+        "{\"attachment\":{\"context\":{\"wakeup\":false}},\"id\":8,\"source\":\"typein\",\"text\":\"%s\",\"timestamp\":\"2020-12-21T10:24:55.996\",\"timestampMillis\":1608517495996}";
+    char nlu_input_str[1000] = {0};
     while (run) {
         std::string input;
 
@@ -348,16 +382,24 @@ int main(int argc, char *argv[]) {
             int ret = pthread_create(&id, nullptr, record_task, nullptr);
         } else if (input == "stop" || input == "t") {
             g_record->stop_record();
-            while(!g_record->is_stop());
+            while (!g_record->is_stop());
             int len = g_record->get_length();
             //printf("record %d bytes\n", len);
-            buffer = (short int *)g_record->get_record();
+            buffer = (short int *) g_record->get_record();
             // down_sample_pcm_buffer_to_file(buffer, "/home/forest/asr/2_16k.pcm", len / sizeof(short int));
             out_buf = (short int *) malloc(len / sizeof(short int));
             int out_len = down_sample_mono(buffer, out_buf, 44100, 16000, len / sizeof(short int));
 
-            char *char_buffer = (char *)out_buf;
-            asr_process.run(char_buffer, out_len);
+            char *char_buffer = (char *) out_buf;
+            asr_process.run(char_buffer, out_len, asr_result);
+#ifdef DM
+            if (extract_text(asr_result, asr_text)) {
+                sprintf(nlu_input_str, format_nlu_input_str, asr_text.c_str());
+                // printf("%s\n", nlu_input_str);
+                const char *nlu_result = dm_process(nlu_input_str, "2");
+                printf("%s\n", nlu_result);
+            }
+#endif
             free(out_buf);
             out_buf = nullptr;
         } else if (input == "exit" || input == "e" || input == "x") {
@@ -366,5 +408,8 @@ int main(int argc, char *argv[]) {
     }
 
     pthread_join(id, nullptr);
+#ifdef DM
+    dm_cleanup();
+#endif
     return 0;
 }

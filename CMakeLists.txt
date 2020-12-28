@@ -1,5 +1,5 @@
-cmake_minimum_required (VERSION 3.13)
-project (asr)
+cmake_minimum_required(VERSION 3.13)
+project(asr)
 
 set(CMAKE_C_STANDARD 99)
 set(PROJECT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
@@ -12,6 +12,8 @@ include_directories(
         ./
 )
 
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
+
 add_executable(asr
         test.cpp
         record_pcm.cpp
@@ -19,4 +21,10 @@ add_executable(asr
         baidu_asr/src/common.cpp
         baidu_asr/src/token.cpp
         )
-target_link_libraries(asr asound pthread ${CURL_LIBRARY})
+target_link_libraries(
+        asr
+        asound
+        pthread
+        ${CURL_LIBRARY}
+        #local_dialog
+        )
